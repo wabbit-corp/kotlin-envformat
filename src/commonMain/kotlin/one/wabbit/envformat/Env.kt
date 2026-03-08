@@ -19,6 +19,8 @@ import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
 
+expect fun platformEnvironment(): Map<String, String>
+
 // -------- Public API --------
 
 /**
@@ -129,13 +131,13 @@ object Env : SerialFormat {
 
     inline fun <reified T> decode(
         prefix: String = "",
-        env: Map<String, String> = System.getenv(),
+        env: Map<String, String> = platformEnvironment(),
     ): T = decode(serializer<T>(), prefix, env)
 
     fun <T> decode(
         strategy: DeserializationStrategy<T>,
         prefix: String = "",
-        env: Map<String, String> = System.getenv(),
+        env: Map<String, String> = platformEnvironment(),
     ): T =
         EnvDecoder(
                 env = env,
