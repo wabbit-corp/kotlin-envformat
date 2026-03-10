@@ -19,26 +19,51 @@ import kotlinx.serialization.modules.EmptySerializersModule
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.serializer
 
+/**
+ * Returns the process environment for the current platform.
+ *
+ * On JVM and Android this delegates to `System.getenv()`.
+ * On Native it currently returns an empty map.
+ *
+ * In shared code, prefer passing an explicit `env` map into [Env.decode] when you want
+ * deterministic behavior across platforms and tests.
+ */
 expect fun platformEnvironment(): Map<String, String>
 
 // -------- Public API --------
 
 /**
- * Environment-variable-backed format.
+ * Serializes typed configuration objects to environment-variable maps and decodes them back again.
  *
- * Rules:
- * - property => SCREAMING_SNAKE
- * - nested objects: join with [Config.separator] (default "__")
- * - lists: <TAG>_COUNT (optional), elements at <TAG>_<INDEX>
- * - prefix is prepended (if non-empty): PREFIX__FIELD...
+ * Default naming rules:
+ * - properties become `SCREAMING_SNAKE_CASE`
+ * - nested objects are joined with [Config.separator], which defaults to `__`
+ * - list items are stored at indexed keys like `TAG__0`, with optional `TAG__COUNT`
+ * - an optional prefix is prepended ahead of the field path
+ *
+ * Example:
+ * ```kotlin
+ * @Serializable
+ * data class DbConfig(val host: String, val port: Int = 5432)
+ *
+ * val env = mapOf(
+ *     "APP__HOST" to "db.internal",
+ *     "APP__PORT" to "5433",
+ * )
+ *
+ * val decoded = Env.decode<DbConfig>("APP", env)
+ * check(decoded == DbConfig(host = "db.internal", port = 5433))
+ * ```
  */
 object Env : SerialFormat {
     override val serializersModule: SerializersModule = EmptySerializersModule()
 
+    /** Controls how map keys are turned into path segments. */
     enum class MapMode {
         KEY_AS_PATH
     }
 
+    /** Configuration knobs for environment naming and collection encoding. */
     data class Config(
         val separator: String = "__",
         val listCountSuffix: String = "_COUNT",
@@ -129,11 +154,27 @@ object Env : SerialFormat {
 
     // --- decoding ---
 
+    /**
+     * Decodes a serializable value of type [T] from environment variables.
+     *
+     * This overload resolves the serializer automatically.
+     *
+     * @param prefix Optional prefix such as `APP`.
+     * @param env The environment map to read from. Defaults to [platformEnvironment].
+     */
     inline fun <reified T> decode(
         prefix: String = "",
         env: Map<String, String> = platformEnvironment(),
     ): T = decode(serializer<T>(), prefix, env)
 
+    /**
+     * Decodes a serializable value from environment variables using an explicit serializer.
+     *
+     * @param strategy Serializer for the target type.
+     * @param prefix Optional prefix such as `APP`.
+     * @param env The environment map to read from. Defaults to [platformEnvironment].
+     * @throws SerializationException when required values are missing or malformed.
+     */
     fun <T> decode(
         strategy: DeserializationStrategy<T>,
         prefix: String = "",
@@ -150,12 +191,39 @@ object Env : SerialFormat {
 
     // --- encoding ---
 
+    /**
+     * Encodes a serializable value into a flat environment-variable map.
+     *
+     * This overload resolves the serializer automatically.
+     *
+     * @param value Value to encode.
+     * @param prefix Optional prefix such as `APP`.
+     * @param encodeDefaults Whether properties equal to defaults should still be emitted.
+     */
     inline fun <reified T> encodeToMap(
         value: T,
         prefix: String = "",
         encodeDefaults: Boolean = config.encodeDefaults,
     ): Map<String, String> = encodeToMap(serializer<T>(), value, prefix, encodeDefaults)
 
+    /**
+     * Encodes a serializable value into a flat environment-variable map using an explicit serializer.
+     *
+     * Example:
+     * ```kotlin
+     * @Serializable
+     * data class DbConfig(val host: String, val port: Int = 5432)
+     *
+     * val encoded = Env.encodeToMap(DbConfig("db.internal", 5433), prefix = "APP")
+     * check(encoded["APP__HOST"] == "db.internal")
+     * check(encoded["APP__PORT"] == "5433")
+     * ```
+     *
+     * @param strategy Serializer for the source type.
+     * @param value Value to encode.
+     * @param prefix Optional prefix such as `APP`.
+     * @param encodeDefaults Whether properties equal to defaults should still be emitted.
+     */
     fun <T> encodeToMap(
         strategy: SerializationStrategy<T>,
         value: T,
