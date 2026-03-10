@@ -116,15 +116,19 @@ kotlin {
     }
 }
 
+val configuredVersionString = version.toString()
+
 tasks.register("printVersion") {
+    inputs.property("configuredVersion", configuredVersionString)
     doLast {
-        println(project.version.toString())
+        println(inputs.properties["configuredVersion"])
     }
 }
 
 tasks.register("assertReleaseVersion") {
+    inputs.property("configuredVersion", configuredVersionString)
     doLast {
-        val versionString = project.version.toString()
+        val versionString = inputs.properties["configuredVersion"].toString()
         require(!versionString.endsWith("+dev-SNAPSHOT")) {
             "Release publishing requires a non-snapshot version, got $versionString"
         }
@@ -140,8 +144,9 @@ tasks.register("assertReleaseVersion") {
 }
 
 tasks.register("assertSnapshotVersion") {
+    inputs.property("configuredVersion", configuredVersionString)
     doLast {
-        val versionString = project.version.toString()
+        val versionString = inputs.properties["configuredVersion"].toString()
         require(versionString.endsWith("+dev-SNAPSHOT")) {
             "Snapshot publishing requires a +dev-SNAPSHOT version, got $versionString"
         }
