@@ -23,6 +23,39 @@ plugins {
     id("org.jetbrains.dokka")
     id("org.jetbrains.kotlinx.kover")
     id("maven-publish")
+
+    id("com.vanniktech.maven.publish")
+}
+
+mavenPublishing {
+    coordinates("one.wabbit", "kotlin-envformat", "0.0.1")
+    publishToMavenCentral()
+    signAllPublications()
+    pom {
+        name.set("kotlin-envformat")
+        description.set("kotlin-envformat")
+        url.set("https://github.com/wabbit-corp/kotlin-envformat")
+        licenses {
+            license {
+                name.set("GNU Affero General Public License v3.0 or later")
+                url.set("https://spdx.org/licenses/AGPL-3.0-or-later.html")
+            }
+        }
+        developers {
+            developer {
+                id.set("wabbit-corp")
+                name.set("Wabbit Consulting Corporation")
+
+                email.set("wabbit@wabbit.one")
+
+            }
+        }
+        scm {
+            url.set("https://github.com/wabbit-corp/kotlin-envformat")
+            connection.set("scm:git:git://github.com/wabbit-corp/kotlin-envformat.git")
+            developerConnection.set("scm:git:ssh://git@github.com/wabbit-corp/kotlin-envformat.git")
+        }
+    }
 }
 
 kotlin {
@@ -80,6 +113,41 @@ kotlin {
 
         }
 
+    }
+}
+
+tasks.register("printVersion") {
+    doLast {
+        println(project.version.toString())
+    }
+}
+
+tasks.register("assertReleaseVersion") {
+    doLast {
+        val versionString = project.version.toString()
+        require(!versionString.endsWith("+dev-SNAPSHOT")) {
+            "Release publishing requires a non-snapshot version, got $versionString"
+        }
+        val refType = System.getenv("GITHUB_REF_TYPE") ?: ""
+        val refName = System.getenv("GITHUB_REF_NAME") ?: ""
+        if (refType == "tag" && refName.isNotBlank()) {
+            val expectedTag = "v$versionString"
+            require(refName == expectedTag) {
+                "Git tag $refName does not match project version $versionString"
+            }
+        }
+    }
+}
+
+tasks.register("assertSnapshotVersion") {
+    doLast {
+        val versionString = project.version.toString()
+        require(versionString.endsWith("+dev-SNAPSHOT")) {
+            "Snapshot publishing requires a +dev-SNAPSHOT version, got $versionString"
+        }
+        require((System.getenv("GITHUB_REF_TYPE") ?: "") != "tag") {
+            "Snapshot publishing must not run from a tag ref"
+        }
     }
 }
 
