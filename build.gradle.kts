@@ -169,8 +169,12 @@ dokka {
 
     dokkaSourceSets.configureEach {
         if (name == "commonMain") {
-            includes.from("docs/dokka-module.md")
+            val dokkaModuleFile = file("docs/dokka-module.md")
+            if (dokkaModuleFile.exists()) {
+                includes.from(dokkaModuleFile)
+            }
         }
+
         sourceLink {
             localDirectory.set(file("src"))
             remoteUrl("https://github.com/wabbit-corp/kotlin-envformat/tree/master/src")
