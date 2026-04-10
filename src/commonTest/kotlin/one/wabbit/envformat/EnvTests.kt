@@ -107,15 +107,8 @@ data class SerialNameBox(
 
 // ----- Utilities -----
 
-private inline fun <R> withEnvConfig(tweak: (Env.Config) -> Env.Config, block: () -> R): R {
-    val prev = Env.config
-    try {
-        Env.config = tweak(prev)
-        return block()
-    } finally {
-        Env.config = prev
-    }
-}
+private inline fun <R> withEnvConfig(tweak: (Env.Config) -> Env.Config, block: (Env) -> R): R =
+    block(Env(config = tweak(Env.Config())))
 
 private fun String.kv(v: Any) = this to v.toString()
 
@@ -352,15 +345,15 @@ class EnvFormatTest {
     fun encode_list_count_toggle() {
         val box = ListBox(xs = listOf(10, 20))
         // writeListCount = false -> omit COUNT
-        withEnvConfig({ it.copy(writeListCount = false) }) {
-            val out = Env.encodeToMap(box, prefix = "P", encodeDefaults = false)
+        withEnvConfig({ it.copy(writeListCount = false) }) { env ->
+            val out = env.encodeToMap(box, prefix = "P", encodeDefaults = false)
             assertFalse("P__XS_COUNT" in out)
             assertEquals("10", out["P__XS__0"])
             assertEquals("20", out["P__XS__1"])
         }
         // writeListCount = true -> include COUNT
-        withEnvConfig({ it.copy(writeListCount = true) }) {
-            val out = Env.encodeToMap(box, prefix = "P", encodeDefaults = false)
+        withEnvConfig({ it.copy(writeListCount = true) }) { env ->
+            val out = env.encodeToMap(box, prefix = "P", encodeDefaults = false)
             assertEquals("2", out["P__XS__COUNT"])
             assertEquals("10", out["P__XS__0"])
             assertEquals("20", out["P__XS__1"])

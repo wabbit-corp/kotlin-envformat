@@ -55,8 +55,10 @@ expect fun platformEnvironment(): Map<String, String>
  * check(decoded == DbConfig(host = "db.internal", port = 5433))
  * ```
  */
-object Env : SerialFormat {
-    override val serializersModule: SerializersModule = EmptySerializersModule()
+class Env(
+    val config: Config = Config(),
+    override val serializersModule: SerializersModule = EmptySerializersModule(),
+) : SerialFormat {
 
     /** Controls how map keys are turned into path segments. */
     enum class MapMode {
@@ -67,7 +69,7 @@ object Env : SerialFormat {
     data class Config(
         val separator: String = "__",
         val listCountSuffix: String = "_COUNT",
-        val nameTransform: (String) -> String = Env::defaultToEnvToken,
+        val nameTransform: (String) -> String = Companion::defaultToEnvToken,
         val honorPretransformedNames: Boolean = true,
         /**
          * Should encoder include properties equals to their defaults? Mirrors Json { encodeDefaults
@@ -87,8 +89,6 @@ object Env : SerialFormat {
         /** When map keys are enums, encode them as names (true) or ordinals (false). */
         val enumKeysAsNames: Boolean = true,
     )
-
-    var config: Config = Config()
 
     // --- Map key escaping (percent-encoding) ---
     private fun hex2(n: Int) = n.toString(16).uppercase().padStart(2, '0')
@@ -242,15 +242,102 @@ object Env : SerialFormat {
         return out
     }
 
-    // Utility — manual CamelCase -> SCREAMING_SNAKE
-    private val SCREAMING_SNAKE = Regex("^[A-Z0-9_]+$")
+    companion object {
+        inline fun <reified T> decode(
+            prefix: String = "",
+            env: Map<String, String> = platformEnvironment(),
+            config: Config = Config(),
+        ): T = Env(config = config).decode(serializer<T>(), prefix, env)
 
-    internal fun toEnvToken(raw: String, cfg: Config): String =
-        if (cfg.honorPretransformedNames && SCREAMING_SNAKE.matches(raw)) raw
-        else cfg.nameTransform(raw)
+        fun <T> decode(
+            strategy: DeserializationStrategy<T>,
+            prefix: String = "",
+            env: Map<String, String> = platformEnvironment(),
+            config: Config = Config(),
+        ): T = Env(config = config).decode(strategy, prefix, env)
 
-    internal fun defaultToEnvToken(name: String): String =
-        name.replace(Regex("([a-z\\d])([A-Z])"), "$1_$2").uppercase()
+        inline fun <reified T> encodeToMap(
+            value: T,
+            prefix: String = "",
+            config: Config = Config(),
+            encodeDefaults: Boolean = config.encodeDefaults,
+        ): Map<String, String> =
+            Env(config = config).encodeToMap(serializer<T>(), value, prefix, encodeDefaults)
+
+        fun <T> encodeToMap(
+            strategy: SerializationStrategy<T>,
+            value: T,
+            prefix: String = "",
+            config: Config = Config(),
+            encodeDefaults: Boolean = config.encodeDefaults,
+        ): Map<String, String> = Env(config = config).encodeToMap(strategy, value, prefix, encodeDefaults)
+
+        // Utility — manual CamelCase -> SCREAMING_SNAKE
+        private val SCREAMING_SNAKE = Regex("^[A-Z0-9_]+$")
+        private fun hex2(n: Int) = n.toString(16).uppercase().padStart(2, '0')
+
+        internal fun encodeMapKeySegment(raw: String, cfg: Config): String {
+            if (!cfg.escapeMapKeys) return raw
+            val sep = cfg.separator
+            val s = raw
+            val out = StringBuilder(s.length)
+            var i = 0
+            while (i < s.length) {
+                val c = s[i]
+                when {
+                    c == '%' -> {
+                        out.append("%25")
+                        i++
+                    }
+                    c == '_' -> {
+                        out.append("%5F")
+                        i++
+                    }
+                    s.regionMatches(i, sep, 0, sep.length) -> {
+                        repeat(sep.length) { j -> out.append('%').append(hex2(sep[j].code)) }
+                        i += sep.length
+                    }
+                    c.isLetterOrDigit() || c == '-' || c == '.' || c == '/' || c == '+' || c == ':' -> {
+                        out.append(c)
+                        i++
+                    }
+                    else -> {
+                        out.append('%').append(hex2(c.code))
+                        i++
+                    }
+                }
+            }
+            return out.toString()
+        }
+
+        internal fun decodeMapKeySegment(enc: String, cfg: Config): String {
+            if (!cfg.escapeMapKeys) return enc
+            val s = enc
+            val out = StringBuilder(s.length)
+            var i = 0
+            while (i < s.length) {
+                val c = s[i]
+                if (c == '%') {
+                    require(i + 2 < s.length) { "Invalid percent escape in map key segment: '$s'" }
+                    val hex = s.substring(i + 1, i + 3)
+                    val ch = hex.toInt(16).toChar()
+                    out.append(ch)
+                    i += 3
+                } else {
+                    out.append(c)
+                    i++
+                }
+            }
+            return out.toString()
+        }
+
+        internal fun toEnvToken(raw: String, cfg: Config): String =
+            if (cfg.honorPretransformedNames && SCREAMING_SNAKE.matches(raw)) raw
+            else cfg.nameTransform(raw)
+
+        internal fun defaultToEnvToken(name: String): String =
+            name.replace(Regex("([a-z\\d])([A-Z])"), "$1_$2").uppercase()
+    }
 }
 
 // -------- Decoder --------
