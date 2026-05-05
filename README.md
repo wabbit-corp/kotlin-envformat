@@ -47,7 +47,7 @@ commonMain.dependencies {
 }
 ```
 
-## Decode Example
+## Quick Start
 
 ```kotlin
 import kotlinx.serialization.Serializable
@@ -121,6 +121,8 @@ APP__ALLOWED_PORTS__1=5433
 ```
 
 The decoder does not require `COUNT`, but the encoder writes it by default.
+`Env.Config.listCountSuffix` defaults to `_COUNT`; the leading underscore is stripped before the
+segment is joined with `__`, producing keys like `APP__ALLOWED_PORTS__COUNT`.
 
 ## Naming Rules
 
@@ -131,6 +133,9 @@ By default:
 - prefixes are prepended before the field path
 
 So `database.host` under prefix `APP` becomes `APP__DATABASE__HOST`.
+
+Encoding omits default-valued properties unless `encodeDefaults = true` is passed or configured.
+Boolean decoding accepts `true`/`false`, `1`/`0`, `yes`/`no`, `y`/`n`, and `on`/`off`.
 
 ## Platform Behavior
 
@@ -147,8 +152,34 @@ val config = Env.decode<AppConfig>("APP", env = mapOf("APP__DATABASE__HOST" to "
 
 That is usually the safest entry point for shared business logic.
 
-## API Reference
+## Status
 
-Published API docs are available at:
+This is an early `0.x` serialization format. The map encoding is useful today, but environment key
+compatibility should be treated as part of your application's configuration contract and covered by
+tests.
 
-- [https://wabbit-corp.github.io/kotlin-envformat/](https://wabbit-corp.github.io/kotlin-envformat/)
+## Documentation
+
+- [User guide](docs/user-guide.md)
+- [API reference notes](docs/api-reference.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Development](docs/development.md)
+
+Generated API docs can be built locally with Dokka. See [API reference notes](docs/api-reference.md)
+for the command.
+
+## Release Notes
+
+- [CHANGELOG.md](CHANGELOG.md)
+
+## Support
+
+Use the GitHub issue tracker for bugs and feature requests, or contact Wabbit Consulting Corporation
+at `wabbit@wabbit.one`.
+
+## Licensing
+
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) for open
+source use.
+
+For commercial use, contact Wabbit Consulting Corporation at `wabbit@wabbit.one`.

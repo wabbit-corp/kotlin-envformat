@@ -56,37 +56,63 @@ expect fun platformEnvironment(): Map<String, String>
  * ```
  */
 class Env(
+    /** Naming, map-key, enum, default-value, and list encoding configuration. */
     val config: Config = Config(),
+
+    /** Serializers module used for contextual and polymorphic serializers. */
     override val serializersModule: SerializersModule = EmptySerializersModule(),
 ) : SerialFormat {
 
     /** Controls how map keys are turned into path segments. */
     enum class MapMode {
+        /** Treat each encoded map key as one path segment under the map field. */
         KEY_AS_PATH
     }
 
     /** Configuration knobs for environment naming and collection encoding. */
     data class Config(
+        /** Separator between path segments, such as prefix, property names, map keys, and list indexes. */
         val separator: String = "__",
-        val listCountSuffix: String = "_COUNT",
-        val nameTransform: (String) -> String = Companion::defaultToEnvToken,
-        val honorPretransformedNames: Boolean = true,
+
         /**
-         * Should encoder include properties equals to their defaults? Mirrors Json { encodeDefaults
-         * = ... }.
+         * Segment used to store list sizes when [writeListCount] is enabled.
+         *
+         * A leading underscore is stripped before the segment is joined with [separator], so the
+         * default `_COUNT` produces keys such as `APP__PORTS__COUNT`.
+         */
+        val listCountSuffix: String = "_COUNT",
+
+        /** Function that transforms Kotlin property names into environment path tokens. */
+        val nameTransform: (String) -> String = Companion::defaultToEnvToken,
+
+        /**
+         * Whether names matching `^[A-Z0-9_]+$` should bypass [nameTransform].
+         */
+        val honorPretransformedNames: Boolean = true,
+
+        /**
+         * Whether encoding should include properties equal to their defaults.
+         *
+         * This mirrors `Json { encodeDefaults = ... }` behavior.
          */
         val encodeDefaults: Boolean = false,
-        /** Should encoder emit <TAG>_COUNT for lists? (decoder doesn't require it) */
+
+        /** Whether encoding should emit `<TAG>_COUNT` for lists. Decoding does not require it. */
         val writeListCount: Boolean = true,
-        /** Encode enums as their names (default) or ordinals. */
+
+        /** Whether enum values should be encoded by serial name instead of ordinal. */
         val enumsAsNames: Boolean = true,
+
+        /** Map encoding mode. Currently only [MapMode.KEY_AS_PATH] is supported. */
         val mapMode: MapMode = MapMode.KEY_AS_PATH,
+
         /**
          * Percent-encode map keys to avoid collisions with the separator and list indexes. Escapes
          * at least '_' and '%', so 'KEY_1' won't collide with list tags like '_1'.
          */
         val escapeMapKeys: Boolean = true,
-        /** When map keys are enums, encode them as names (true) or ordinals (false). */
+
+        /** Whether enum map keys should be encoded by serial name instead of ordinal. */
         val enumKeysAsNames: Boolean = true,
     )
 
@@ -243,12 +269,20 @@ class Env(
     }
 
     companion object {
+        /**
+         * Decodes a serializable value using a temporary [Env] instance.
+         *
+         * This overload resolves the serializer automatically.
+         */
         inline fun <reified T> decode(
             prefix: String = "",
             env: Map<String, String> = platformEnvironment(),
             config: Config = Config(),
         ): T = Env(config = config).decode(serializer<T>(), prefix, env)
 
+        /**
+         * Decodes a serializable value using an explicit [strategy] and a temporary [Env] instance.
+         */
         fun <T> decode(
             strategy: DeserializationStrategy<T>,
             prefix: String = "",
@@ -256,6 +290,11 @@ class Env(
             config: Config = Config(),
         ): T = Env(config = config).decode(strategy, prefix, env)
 
+        /**
+         * Encodes [value] using a temporary [Env] instance.
+         *
+         * This overload resolves the serializer automatically.
+         */
         inline fun <reified T> encodeToMap(
             value: T,
             prefix: String = "",
@@ -264,6 +303,9 @@ class Env(
         ): Map<String, String> =
             Env(config = config).encodeToMap(serializer<T>(), value, prefix, encodeDefaults)
 
+        /**
+         * Encodes [value] using an explicit [strategy] and a temporary [Env] instance.
+         */
         fun <T> encodeToMap(
             strategy: SerializationStrategy<T>,
             value: T,
