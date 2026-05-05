@@ -1,5 +1,12 @@
 # kotlin-envformat
 
+![](./.meta/github-project-banner.png)
+
+<p align=center>
+    <img src="https://img.shields.io/maven-central/v/one.wabbit/kotlin-envformat" alt="Maven Central">
+    <img src="https://img.shields.io/badge/Kotlin-Multiplatform-7F52FF" alt="Kotlin Multiplatform">
+</p>
+
 `kotlin-envformat` is a Kotlin Multiplatform library for mapping structured `kotlinx.serialization` models to environment variables and decoding environment variables back into typed configuration objects.
 
 It is designed for applications that want:
@@ -39,7 +46,7 @@ APP__DATABASE__PORT=5433
 
 into a typed `AppConfig`, and it can encode the same object back into a deterministic `Map<String, String>`.
 
-## Installation
+## 🚀 Installation
 
 ```kotlin
 commonMain.dependencies {
@@ -47,7 +54,7 @@ commonMain.dependencies {
 }
 ```
 
-## Quick Start
+## 🚀 Usage
 
 ```kotlin
 import kotlinx.serialization.Serializable
@@ -183,3 +190,8 @@ This project is licensed under the GNU Affero General Public License v3.0 (AGPL-
 source use.
 
 For commercial use, contact Wabbit Consulting Corporation at `wabbit@wabbit.one`.
+
+## Contributing
+
+Contributions are governed by the repository contribution policy and the Wabbit CLA. See
+`CONTRIBUTING.md` and the files under `legal/`.

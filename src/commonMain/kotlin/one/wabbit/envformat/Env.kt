@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 @file:OptIn(ExperimentalSerializationApi::class)
 
 package one.wabbit.envformat
@@ -22,8 +24,8 @@ import kotlinx.serialization.serializer
 /**
  * Returns the process environment for the current platform.
  *
- * On JVM and Android this delegates to `System.getenv()`.
- * On Native it currently returns an empty map.
+ * On JVM and Android this delegates to `System.getenv()`. On Native it currently returns an empty
+ * map.
  *
  * In shared code, prefer passing an explicit `env` map into [Env.decode] when you want
  * deterministic behavior across platforms and tests.
@@ -71,7 +73,10 @@ class Env(
 
     /** Configuration knobs for environment naming and collection encoding. */
     data class Config(
-        /** Separator between path segments, such as prefix, property names, map keys, and list indexes. */
+        /**
+         * Separator between path segments, such as prefix, property names, map keys, and list
+         * indexes.
+         */
         val separator: String = "__",
 
         /**
@@ -85,9 +90,7 @@ class Env(
         /** Function that transforms Kotlin property names into environment path tokens. */
         val nameTransform: (String) -> String = Companion::defaultToEnvToken,
 
-        /**
-         * Whether names matching `^[A-Z0-9_]+$` should bypass [nameTransform].
-         */
+        /** Whether names matching `^[A-Z0-9_]+$` should bypass [nameTransform]. */
         val honorPretransformedNames: Boolean = true,
 
         /**
@@ -233,7 +236,8 @@ class Env(
     ): Map<String, String> = encodeToMap(serializer<T>(), value, prefix, encodeDefaults)
 
     /**
-     * Encodes a serializable value into a flat environment-variable map using an explicit serializer.
+     * Encodes a serializable value into a flat environment-variable map using an explicit
+     * serializer.
      *
      * Example:
      * ```kotlin
@@ -303,19 +307,19 @@ class Env(
         ): Map<String, String> =
             Env(config = config).encodeToMap(serializer<T>(), value, prefix, encodeDefaults)
 
-        /**
-         * Encodes [value] using an explicit [strategy] and a temporary [Env] instance.
-         */
+        /** Encodes [value] using an explicit [strategy] and a temporary [Env] instance. */
         fun <T> encodeToMap(
             strategy: SerializationStrategy<T>,
             value: T,
             prefix: String = "",
             config: Config = Config(),
             encodeDefaults: Boolean = config.encodeDefaults,
-        ): Map<String, String> = Env(config = config).encodeToMap(strategy, value, prefix, encodeDefaults)
+        ): Map<String, String> =
+            Env(config = config).encodeToMap(strategy, value, prefix, encodeDefaults)
 
         // Utility — manual CamelCase -> SCREAMING_SNAKE
         private val SCREAMING_SNAKE = Regex("^[A-Z0-9_]+$")
+
         private fun hex2(n: Int) = n.toString(16).uppercase().padStart(2, '0')
 
         internal fun encodeMapKeySegment(raw: String, cfg: Config): String {
@@ -339,7 +343,12 @@ class Env(
                         repeat(sep.length) { j -> out.append('%').append(hex2(sep[j].code)) }
                         i += sep.length
                     }
-                    c.isLetterOrDigit() || c == '-' || c == '.' || c == '/' || c == '+' || c == ':' -> {
+                    c.isLetterOrDigit() ||
+                        c == '-' ||
+                        c == '.' ||
+                        c == '/' ||
+                        c == '+' ||
+                        c == ':' -> {
                         out.append(c)
                         i++
                     }
