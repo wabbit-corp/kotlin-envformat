@@ -1,0 +1,6 @@
+# Repo-local check suppressions for generated assets and intentional parser fixtures.
+check:ignore E_DUPLICATE_FILE .banner.png
+check:ignore E_KMP_AMBIGUOUS_NATIVE_NAME .
+check:ignore E_KMP_REDUNDANT_TARGET_ALIAS .
+check:ignore E_STALE_TODO src/commonMain/kotlin/one/wabbit/envformat/Env.kt
+check:ignore E_HARDCODED_INTERNAL_HOSTNAME_IP src/commonTest/kotlin/one/wabbit/envformat/EnvTests.kt
